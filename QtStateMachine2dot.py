@@ -1,6 +1,7 @@
 import re
 import argparse
 import os
+from graphviz import Digraph
 
 class Diagram:
     DEBUG = True
@@ -48,21 +49,24 @@ class Diagram:
             result += "\n"
         return result
     
-    def toDot(self, filename, verbose=False):
-        with open(filename, 'w') as file:
-            file.write("digraph G {\n")
-            for state in self.states:
-                file.write(f'  "{state}" [shape=circle];\n')
-            for fromState, toState, label, group in self.transitions:
-                attributes = []
-                if label:
-                    attributes.append(f'label="{label}"')
-                if group and hasattr(self, 'groupColors') and group in self.groupColors:
-                    attributes.append(f'color="{self.groupColors[group]}"')
-                attrStr = ', '.join(attributes)
-                file.write(f'  "{fromState}" -> "{toState}" [{attrStr}];\n')
-            file.write("}\n")
-        if verbose:
+    def toDot(self, filename, verbose=False, visualize=False):
+        dot = Digraph(comment='State Machine')
+        for state in self.states:
+            dot.node(state, shape='circle')
+        for fromState, toState, label, group in self.transitions:
+            attributes = {}
+            if label:
+                attributes['label'] = label
+            if group and hasattr(self, 'groupColors') and group in self.groupColors:
+                attributes['color'] = self.groupColors[group]
+            dot.edge(fromState, toState, **attributes)
+        
+        if filename:
+            dot.render(filename, format='png')
+            if verbose:
+                print(f"DOT file written to {filename}.png")
+        if visualize:
+            dot.view()
             print(f"DOT file written to {filename}")
 
 class QtStateMachineParser:
@@ -246,7 +250,10 @@ if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(description="Parse a cpp file for Qt statemachines and generate a DOT file.")
     arg_parser.add_argument('--file', type=str, required=True, help='The cpp  file to parse for Qt state machine ')
     arg_parser.add_argument('--outputdir', type=str, required=False, help='Output directory, default is current dir')
+    arg_parser.add_argument('--visualize', type=bool, required=False, default=False, help='Show the diagram in a window using Graphiz')
+    
     args = arg_parser.parse_args()
+
 
     parser = QtStateMachineParser(args.file)
     parser.parse()
@@ -254,6 +261,7 @@ if __name__ == "__main__":
     
     filename =   os.path.basename(args.file)
     output_prefix = f"diagram_{filename}"
+    visual = args.visualize
     if args.outputdir:
         if not os.path.exists(args.outputdir):
             os.makedirs(args.outputdir)
@@ -266,4 +274,4 @@ if __name__ == "__main__":
         diagram.addStates(states)
         transitions = parser.getTransitions(machine)
         diagram.addTransitions(transitions)
-        diagram.toDot(f"{output_prefix}_{machine}.dot", verbose = True)
+        diagram.toDot(f"{output_prefix}_{machine}.dot", verbose = True, visualize = visual)

@@ -1,0 +1,11 @@
+// State Machine
+digraph {
+	state2 [shape=circle]
+	finalState [shape=circle]
+	state1 [shape=circle]
+	state3 [shape=circle]
+	state1 -> state2 [label=QTimer]
+	state2 -> state3 [label=QTimer]
+	state3 -> state2 [label=QTimer]
+	state3 -> finalState [label=QTimer]
+}
